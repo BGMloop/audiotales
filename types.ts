@@ -8,6 +8,10 @@ export interface Tool {
         description: string;
         type: string;
       };
+      [key: string]: {
+        description: string;
+        type: string;
+      };
     };
     type: string;
   };

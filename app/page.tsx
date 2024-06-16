@@ -1,13 +1,18 @@
-// File: app/page.js
 "use client";
 
 import { EventData } from "@/types";
 import { useState } from "react";
 
 export default function Home() {
-  const [script, setScript] = useState("");
+  const [story, setStory] = useState(
+    "Write a story about a robot and a human who become friends."
+  );
   const [input, setInput] = useState("");
   const [events, setEvents] = useState<EventData[]>([]);
+  const [progress, setProgress] = useState("");
+  const [currentTool, setCurrentTool] = useState("");
+  const [pages, setPages] = useState(1);
+  const [path, setPath] = useState("stories");
 
   async function runScript() {
     const response = await fetch("/api/run-script", {
@@ -15,7 +20,7 @@ export default function Home() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ script, input }),
+      body: JSON.stringify({ story, pages, path }),
     });
 
     console.log(response);
@@ -38,7 +43,14 @@ export default function Home() {
         eventData.forEach((data) => {
           try {
             const parsedData = JSON.parse(data);
-            setEvents((prevEvents) => [...prevEvents, parsedData]);
+            if (parsedData.type === "callProgress") {
+              setProgress(
+                parsedData.output[parsedData.output.length - 1].content
+              );
+              setCurrentTool(parsedData.tool?.description || "");
+            } else {
+              setEvents((prevEvents) => [...prevEvents, parsedData]);
+            }
           } catch (error) {
             console.error("Failed to parse JSON", error);
           }
@@ -51,45 +63,86 @@ export default function Home() {
     }
   }
 
-  const renderEventMessage = (event: EventData) => {
-    switch (event.type) {
-      case "runStart":
-        return <div>Run started at {event.start}</div>;
-      case "callStart":
-        return <div>Call started: {event.tool?.description}</div>;
-      case "callChat":
-        return (
-          <div>
-            Chat in progress with your input {">>"} {event.input}
-          </div>
-        );
-      case "callProgress":
-        return (
-          <div>
-            Progress: {event.output?.map((output) => output.content).join(", ")}
-          </div>
-        );
-      case "callFinish":
-        return (
-          <div>
-            Call finished:{" "}
-            {event.output?.map((output) => output.content).join(", ")}
-          </div>
-        );
-      case "runFinish":
-        return <div>Run finished at {event.end}</div>;
-      default:
-        return <div>Unknown event type</div>;
-    }
-  };
+  // const renderEventMessage = (event: EventData) => {
+  //   switch (event.type) {
+  //     case "runStart":
+  //       return <div>Run started at {event.start}</div>;
+  //     case "callStart":
+  //       return (
+  //         <div>
+  //           <p>Tool Starting: {event.tool?.description}</p>
+  //         </div>
+  //       );
+  //     case "callChat":
+  //       return (
+  //         <div>
+  //           Chat in progress with your input {">>"} {event.input}
+  //         </div>
+  //       );
+  //     case "callProgress":
+  //       return null;
+  //     case "callFinish":
+  //       return (
+  //         <div>
+  //           Call finished:{" "}
+  //           {event.output?.map((output) => (
+  //             <div key={output.content}>{output.content}</div>
+  //           ))}
+  //         </div>
+  //       );
+  //     case "runFinish":
+  //       return <div>Run finished at {event.end}</div>;
+  //     case "callSubCalls":
+  //       return (
+  //         <div>
+  //           Sub-calls in progress:
+  //           {event.output?.map((output, index) => (
+  //             <div key={index}>
+  //               <div>{output.content}</div>
+  //               {output.subCalls &&
+  //                 Object.keys(output.subCalls).map((subCallKey) => (
+  //                   <div key={subCallKey}>
+  //                     <strong>SubCall {subCallKey}:</strong>
+  //                     <div>Tool ID: {output.subCalls[subCallKey].toolID}</div>
+  //                     <div>Input: {output.subCalls[subCallKey].input}</div>
+  //                   </div>
+  //                 ))}
+  //             </div>
+  //           ))}
+  //         </div>
+  //       );
+  //     case "callContinue":
+  //       return (
+  //         <div>
+  //           Call continues:
+  //           {event.output?.map((output, index) => (
+  //             <div key={index}>
+  //               <div>{output.content}</div>
+  //               {output.subCalls &&
+  //                 Object.keys(output.subCalls).map((subCallKey) => (
+  //                   <div key={subCallKey}>
+  //                     <strong>SubCall {subCallKey}:</strong>
+  //                     <div>Tool ID: {output.subCalls[subCallKey].toolID}</div>
+  //                     <div>Input: {output.subCalls[subCallKey].input}</div>
+  //                   </div>
+  //                 ))}
+  //             </div>
+  //           ))}
+  //         </div>
+  //       );
+  //     default:
+  //       return <pre>{JSON.stringify(event, null, 2)}</pre>;
+  //   }
+  // };
 
   return (
     <div>
       <h1>GPTScript App</h1>
       <textarea
-        value={script}
-        onChange={(e) => setScript(e.target.value)}
-        placeholder="Enter your script here"
+        value={story}
+        onChange={(e) => setStory(e.target.value)}
+        placeholder="Enter your story here"
+        className="text-black"
       ></textarea>
       <input
         type="text"
@@ -100,10 +153,11 @@ export default function Home() {
       <button onClick={runScript}>Run Script</button>
       <div>
         <h2>Events:</h2>
-        {events.map((event, index) => (
+        {currentTool && <div>Current Tool: {currentTool}</div>}
+        {progress && <div>Progress: {progress}</div>}
+        {/* {events.map((event, index) => (
           <div key={index}>{renderEventMessage(event)}</div>
-        ))}
-        {/* <pre>{JSON.stringify(events, null, 2)}</pre> */}
+        ))} */}
       </div>
     </div>
   );
