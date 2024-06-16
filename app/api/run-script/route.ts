@@ -26,6 +26,11 @@ export async function POST(request: NextRequest) {
         try {
           const run = await g.run("https://get.gptscript.ai/echo.gpt", opts);
 
+          // ----
+          // TUTORIAL: Uncomment the line below to test the script with the input "Hello, World!", I recommend you to test it with the input "Hello, World!" to check your streaming is working correctly.
+          //   const run = await g.run("https://get.gptscript.ai/echo.gpt", opts) // Test this with input: "Hello, World!" inside opts
+          // ----
+
           run.on(RunEventType.Event, (data) => {
             controller.enqueue(
               encoder.encode(`event: ${JSON.stringify(data)}\n\n`)
@@ -46,7 +51,6 @@ export async function POST(request: NextRequest) {
     return new Response(stream, {
       headers: {
         "Content-Type": "text/event-stream",
-        "Content-Encoding": "none",
         "Cache-Control": "no-cache",
         Connection: "keep-alive",
       },
