@@ -3,7 +3,8 @@ import path from "path";
 import { Story, Page } from "../types/stories";
 import cleanTitle from "./cleanTitle";
 
-const storiesDirectory = path.join(process.cwd(), "public", "stories");
+const storiesDirectory = path.join(process.cwd(), "public/stories");
+console.log(storiesDirectory);
 
 export function getAllStories(): Story[] {
   if (!fs.existsSync(storiesDirectory)) {

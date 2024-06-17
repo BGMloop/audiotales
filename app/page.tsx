@@ -1,119 +1,41 @@
-"use client";
-
-// https://tools.gptscript.ai/
-
-import renderEventMessage from "@/lib/renderEventMessage";
-import { Frame } from "@gptscript-ai/gptscript";
-import { useState } from "react";
-
-const showLogs = false;
+import StoryWriter from "@/components/StoryWriter";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import Logo from "@/images/logo.png";
+import Image from "next/image";
 
 export default function Home() {
-  const [story, setStory] = useState(
-    "Write a story about a robot and a human who become friends."
-  );
-  const [input, setInput] = useState("");
-  const [events, setEvents] = useState<Frame[]>([]);
-  const [progress, setProgress] = useState("");
-  const [currentTool, setCurrentTool] = useState("");
-  const [pages, setPages] = useState(3);
-  const [path, setPath] = useState("public/stories");
-  const [runFinished, setRunFinished] = useState(false);
-
-  async function handleStream(
-    reader: ReadableStreamDefaultReader<Uint8Array>,
-    decoder: TextDecoder
-  ) {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      // Explanation: The decoder is used to decode the Uint8Array into a string.
-      const chunk = decoder.decode(value, { stream: true });
-
-      // Explanation: We split the chunk into events by splitting it by the event: keyword.
-      const eventData = chunk
-        .split("\n\n")
-        .filter((line) => line.startsWith("event: "))
-        .map((line) => line.replace(/^event: /, ""));
-
-      // Explanation: We parse the JSON data and update the state accordingly.
-      eventData.forEach((data) => {
-        try {
-          const parsedData = JSON.parse(data);
-          if (parsedData.type === "callProgress") {
-            setProgress(
-              parsedData.output[parsedData.output.length - 1].content
-            );
-            setCurrentTool(parsedData.tool?.description || "");
-          } else if (parsedData.type === "callStart") {
-            setCurrentTool(parsedData.tool?.description || "");
-          } else if (parsedData.type === "runFinish") {
-            setRunFinished(true);
-          } else {
-            // Explain: We update the events state with the parsed data.
-            setEvents((prevEvents) => [...prevEvents, parsedData]);
-          }
-        } catch (error) {
-          console.error("Failed to parse JSON", error);
-        }
-      });
-    }
-  }
-
-  async function runScript() {
-    setRunFinished(false);
-
-    const response = await fetch("/api/run-script", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ story, pages, path }),
-    });
-
-    if (response.ok && response.body) {
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-
-      handleStream(reader, decoder);
-      console.log("Streaming started");
-    } else {
-      setRunFinished(true);
-      console.error("Failed to start streaming");
-    }
-  }
-
   return (
-    <div>
-      <h1>GPTScript App</h1>
-      <textarea
-        value={story}
-        onChange={(e) => setStory(e.target.value)}
-        placeholder="Enter your story here"
-        className="text-black"
-      ></textarea>
-      <input
-        type="text"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        placeholder="Enter input here"
-      />
-      <button onClick={runScript}>Run Script</button>
-      <div>
-        <h2>Events:</h2>
-        {currentTool && <div>Current Tool: {currentTool}</div>}
-        {runFinished && <div>Run Finished</div>}
+    <div className="flex flex-col min-h-screen h-full">
+      <section className="p-16 text-center">
+        <h1 className="text-6xl font-black">Let AI</h1>
+        <div className="flex space-x-5 text-3xl lg:text-5xl justify-center whitespace-nowrap">
+          <h2>Bring your stories</h2>
+          <div className="relative">
+            <div className="absolute bg-purple-500 -left-2 -top-1 -bottom-1 -right-2 md:-left-3 md:-top-0 md:-bottom-0 md:-right-3 -rotate-1 h-" />
+            <div className="relative text-white">To life!</div>
+          </div>
+        </div>
 
-        {/* --- Enable showLogs TO SEE LOGS --- */}
-        {showLogs &&
-          events.map((event, index) => (
-            <div key={index}>{renderEventMessage(event)}</div>
-          ))}
-        {/* --- */}
+        {/* <p className="italic mt-2">
+          Combine Several AI tools with{" "}
+          <span className="text-purple-500">GPTScript</span>, a framework that
+          allows LLMs to operate & interact with multiple various systems.
+        </p> */}
+      </section>
 
-        {progress && <div>Progress: {progress}</div>}
-      </div>
+      <section className="flex-1 grid grid-cols-1 lg:grid-cols-2">
+        <div className="bg-purple-500 flex flex-col space-y-5 justify-center items-center order-1 lg:-order-1 pb-10">
+          <Image src={Logo} alt="AI Storyteller" height={250} className="" />
+
+          <Button asChild className="px-20 bg-purple-700 p-10 text-xl">
+            <Link href="/stories">Explore story library</Link>
+          </Button>
+        </div>
+        {/* <Image src={Logo} alt="AI Storyteller" /> */}
+
+        <StoryWriter />
+      </section>
     </div>
   );
 }
