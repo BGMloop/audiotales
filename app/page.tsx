@@ -16,8 +16,8 @@ export default function Home() {
   const [events, setEvents] = useState<Frame[]>([]);
   const [progress, setProgress] = useState("");
   const [currentTool, setCurrentTool] = useState("");
-  const [pages, setPages] = useState(2);
-  const [path, setPath] = useState("stories");
+  const [pages, setPages] = useState(3);
+  const [path, setPath] = useState("public/stories");
   const [runFinished, setRunFinished] = useState(false);
 
   async function handleStream(
@@ -117,5 +117,3 @@ export default function Home() {
     </div>
   );
 }
-
-// --- HELPER FUNCTION TO RENDER EVENTS ---
