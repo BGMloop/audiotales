@@ -30,7 +30,5 @@ export async function generateStaticParams() {
     id: story.story,
   }));
 
-  console.log(paths);
-
   return paths;
 }

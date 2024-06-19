@@ -1,55 +1,74 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Story as StoryType } from "../types/stories";
 import Image from "next/image";
-import Link from "next/link";
+
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Carousel,
+  CarouselApi,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 interface Props {
   story: StoryType;
 }
 
 const Story = ({ story }: Props) => {
-  const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [api, setApi] = useState<CarouselApi>();
+  const [current, setCurrent] = useState(0);
+  const [count, setCount] = useState(0);
 
-  const handleNextPage = () => {
-    if (currentPageIndex < story.pages.length - 1) {
-      setCurrentPageIndex(currentPageIndex + 1);
+  useEffect(() => {
+    if (!api) {
+      return;
     }
-  };
 
-  const handlePreviousPage = () => {
-    if (currentPageIndex > 0) {
-      setCurrentPageIndex(currentPageIndex - 1);
-    }
-  };
+    setCount(api.scrollSnapList().length);
+    setCurrent(api.selectedScrollSnap() + 1);
 
-  console.log(story);
+    api.on("select", () => {
+      setCurrent(api.selectedScrollSnap() + 1);
+    });
+  }, [api]);
 
   return (
-    <div>
-      <h2>{story.story}</h2>
+    <div className="">
+      <div className="px-20">
+        <Carousel setApi={setApi} className="w-full lg:w-4/5 h-56 mx-auto">
+          <CarouselContent className="px-5">
+            {story.pages.map((page, i) => (
+              <CarouselItem key={i}>
+                <Card className="p-5 md:p-10 border">
+                  <h2 className="text-center text-gray-400">{story.story}</h2>
 
-      <p>{story.pages[currentPageIndex].txt}</p>
+                  <CardContent className="p-5 xl:flex">
+                    <Image
+                      src={page.png}
+                      alt={`Page ${i + 1}`}
+                      width={500}
+                      height={500}
+                      className="w-80 h-8w-80 xl:w-[500px] xl:h-[500px] rounded-3xl mx-auto float-right p-5 xl:order-last"
+                    />
+                    <p className="font-semibold text-xl first-letter:text-3xl whitespace-pre-wrap">
+                      {page.txt}
+                    </p>
+                  </CardContent>
 
-      <Image
-        src={story.pages[currentPageIndex].png}
-        alt={`Page ${currentPageIndex + 1}`}
-        width={500}
-        height={500}
-      />
-
-      <div>
-        <button onClick={handlePreviousPage} disabled={currentPageIndex === 0}>
-          Previous
-        </button>
-        <Link href="/stories">Back to Stories</Link>
-        <button
-          onClick={handleNextPage}
-          disabled={currentPageIndex === story.pages.length - 1}
-        >
-          Next
-        </button>
+                  <p className="text-center text-gray-400">
+                    Page {current} of {count}
+                  </p>
+                </Card>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          <CarouselPrevious />
+          <CarouselNext />
+        </Carousel>
       </div>
     </div>
   );

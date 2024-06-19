@@ -4,7 +4,6 @@ import { Story, Page } from "../types/stories";
 import cleanTitle from "./cleanTitle";
 
 const storiesDirectory = path.join(process.cwd(), "public/stories");
-console.log(storiesDirectory);
 
 export function getAllStories(): Story[] {
   if (!fs.existsSync(storiesDirectory)) {
@@ -50,7 +49,10 @@ export function getAllStories(): Story[] {
     };
   });
 
-  return stories;
+  // filter any stories with zero pages
+  const storiesWithPages = stories.filter((story) => story.pages.length > 0);
+
+  return storiesWithPages;
 }
 
 export const getStory = (story: string): Story | undefined => {

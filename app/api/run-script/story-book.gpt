@@ -36,7 +36,7 @@ Return your story, illustration style, and character descriptions.
 
 ---
 name: story-illustrator
-tools: github.com/gptscript-ai/image-generation
+tools: github.com/gptscript-ai/dalle-image-generation
 description: Generates a illustration for a children's story
 temperature: 1
 args: text: The text of the page to illustrate
