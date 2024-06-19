@@ -9,7 +9,7 @@ const storiesPath = "public/stories";
 
 import renderEventMessage from "@/lib/renderEventMessage";
 import { Frame } from "@gptscript-ai/gptscript";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Select,
   SelectContent,
@@ -19,6 +19,8 @@ import {
 } from "./ui/select";
 import { Textarea } from "./ui/textarea";
 import { Button } from "./ui/button";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 function StoryWriter() {
   const [story, setStory] = useState<string>();
@@ -28,6 +30,8 @@ function StoryWriter() {
   const [pages, setPages] = useState<number>();
   const [runFinished, setRunFinished] = useState<boolean | null>(null);
   const [runStarted, setRunStarted] = useState<boolean>(false);
+
+  const router = useRouter();
 
   async function handleStream(
     reader: ReadableStreamDefaultReader<Uint8Array>,
@@ -59,6 +63,7 @@ function StoryWriter() {
             setCurrentTool(parsedData.tool?.description || "");
           } else if (parsedData.type === "runFinish") {
             setRunFinished(true);
+
             setRunStarted(false);
           } else {
             // Explain: We update the events state with the parsed data.
@@ -95,6 +100,21 @@ function StoryWriter() {
       console.error("Failed to start streaming");
     }
   }
+
+  useEffect(() => {
+    if (runFinished) {
+      toast.success("Story generated successfully!", {
+        action: (
+          <Button
+            onClick={() => router.push("/stories")}
+            className="bg-purple-500 ml-auto"
+          >
+            View Stories
+          </Button>
+        ),
+      });
+    }
+  }, [runFinished]);
 
   return (
     <div className="flex flex-col container">
