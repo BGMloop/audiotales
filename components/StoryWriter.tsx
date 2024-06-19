@@ -114,7 +114,7 @@ function StoryWriter() {
         ),
       });
     }
-  }, [runFinished]);
+  }, [runFinished, router]);
 
   return (
     <div className="flex flex-col container">
@@ -158,7 +158,7 @@ function StoryWriter() {
             {runFinished === null && (
               <>
                 <span className="mr-5 animate-pulse">
-                  I'm waiting for you to Generate a story above...
+                  Im waiting for you to Generate a story above...
                 </span>
                 <br />
               </>

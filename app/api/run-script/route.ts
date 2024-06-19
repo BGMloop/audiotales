@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { RunEventType } from "@gptscript-ai/gptscript";
+import { RunEventType, RunOpts } from "@gptscript-ai/gptscript";
 import g from "@/lib/gptScriptInstance";
 
 const script = "app/api/run-script/story-book.gpt";
@@ -8,9 +8,9 @@ export async function POST(request: NextRequest) {
   const { story, pages, path } = await request.json();
 
   // FIXME: Potential issue with new version fix (added to input): --disable-cache --credential-override "sys.openai:OPENAI_API_KEY"
-  const opts = {
+  const opts: RunOpts = {
     disableCache: true,
-    input: ` ${story ? ` --story ${story}` : ""} ${
+    input: `${story ? ` --story ${story}` : ""} ${
       pages ? `--pages ${pages}` : ""
     } ${path ? `--path ${path}` : ""}`.trim(),
   };
