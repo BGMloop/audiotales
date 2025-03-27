@@ -1,3 +1,6 @@
+# audiotales
+ Creating my own story book with beautiful text &amp; images( Next.js 15, TS, React.js, Vercel)
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
