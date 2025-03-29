@@ -1,0 +1,39 @@
+{
+    "mcpServers": {
+      "browser-tools-mcp-local": {
+        "command": "cmd",
+        "args": [
+          "/c",
+          "npx",
+          "-y",
+          "@agentdeskai/browser-tools-mcp@1.2.0"
+        ],
+        "enabled": true
+      },
+      "firecrawl": {
+        "command": "cmd",
+        "args": [
+          "/c",
+          "set",
+          "FIRECRAWL_API_KEY=fc-9ce401fc3bf54fdba6c12568bef436a8",
+          "&&",
+          "npx",
+          "-y",
+          "firecrawl-mcp"
+        ],
+        "enabled": true
+      },
+        "server-sequential-thinking": {
+          "command": "cmd",
+          "args": [
+            "/c",
+            "npx",
+            "-y",
+            "@smithery/cli@latest",
+            "run",
+            "@smithery-ai/server-sequential-thinking"
+          ],
+            "enabled": true
+        }
+    }
+}

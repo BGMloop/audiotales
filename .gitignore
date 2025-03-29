@@ -78,3 +78,9 @@ ENV/
 
 # Logs
 *.log
+
+# Cursor
+.cursor/
+
+# MCP
+.cursor/mcp.json
