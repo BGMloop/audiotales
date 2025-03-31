@@ -1,0 +1,13 @@
+{
+  "preferredVoice": "Custom:ashley_moore",
+  "onlineVoices": [
+    {
+      "id": "snoop_dogg",
+      "name": "Snoop Dogg",
+      "language": "en-US",
+      "provider": "custom",
+      "preview_url": "https://example.com/previews/snoop_dogg.mp3"
+    }
+  ],
+  "lastUsed": "2025-03-29T10:57:31.097Z"
+}
