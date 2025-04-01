@@ -84,3 +84,13 @@ ENV/
 
 # MCP
 .cursor/mcp.json
+mcp.json.global
+
+# components
+components/
+
+# lib
+lib/
+
+
+
