@@ -1,0 +1,27 @@
+tools: fetch
+description: Generates images based on the specified parameters and returns a list of URLs to the generated images.
+args: prompt: (required) The text prompt based on which the GPT model will generate a response
+args: size: (optional) The size of the image to generate, format WxH (e.g. 1024x1024). Defaults to 1024x1024.
+args: quality: (optional) The quality of the generated image. Allowed values are "standard" or "hd". Default is "standard".
+args: number: (optional) The number of images to generate. Defaults to 1.
+
+# Make a POST request to the API endpoint with the given parameters
+const response = await fetch("/api/dalle-image-generation", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    prompt: "${prompt}",
+    size: "${size}",
+    quality: "${quality}",
+    number: ${number},
+  }),
+});
+
+if (!response.ok) {
+  throw new Error(`Failed to generate image: ${response.statusText}`);
+}
+
+const data = await response.json();
+return data; 

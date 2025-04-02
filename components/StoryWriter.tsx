@@ -150,50 +150,51 @@ function StoryWriter() {
       </section>
 
       {/* --- AI VIEWER --- */}
-      <div className="flex-1 pb-5 mt-5">
-        {runFinished && <div>Run Finished</div>}
+      {showLogs && (
+        <div className="flex-1 pb-5 mt-5">
+          {runFinished && <div>Run Finished</div>}
 
-        <div className="flex flex-col-reverse w-full space-y-2 bg-gray-800 rounded-md text-gray-200 font-mono p-10 h-96 overflow-y-scroll">
-          <div>
-            {runFinished === null && (
-              <>
-                <span className="mr-5 animate-pulse">
-                  Im waiting for you to Generate a story above...
+          <div className="flex flex-col-reverse w-full space-y-2 bg-gray-800 rounded-md text-gray-200 font-mono p-10 h-96 overflow-y-scroll">
+            <div>
+              {runFinished === null && (
+                <>
+                  <span className="mr-5 animate-pulse">
+                    Im waiting for you to Generate a story above...
+                  </span>
+                  <br />
+                </>
+              )}
+              <span className="mr-5">{">>"}</span>
+              {progress}
+            </div>
+
+            {currentTool && (
+              <div className="py-10">
+                <span className="mr-5">{"--- [Current Tool] ---"}</span>
+                {currentTool}
+              </div>
+            )}
+            {/* --- AI renderEventMessage Events Helper --- */}
+            <div className="space-y-5">
+              {events.map((event, index) => (
+                <div key={index} className="flex">
+                  <span className="mr-5">{">>"}</span>
+                  {renderEventMessage(event)}
+                </div>
+              ))}
+            </div>
+
+            {runStarted && (
+              <div>
+                <span className="mr-5 animate-in">
+                  {"--- [AI AudioTales Has Started] ---"}
                 </span>
                 <br />
-              </>
-            )}
-            <span className="mr-5">{">>"}</span>
-            {progress}
-          </div>
-
-          {currentTool && (
-            <div className="py-10">
-              <span className="mr-5">{"--- [Current Tool] ---"}</span>
-
-              {currentTool}
-            </div>
-          )}
-
-          <div className="space-y-5">
-            {events.map((event, index) => (
-              <div key={index} className="flex">
-                <span className="mr-5">{">>"}</span>
-                {renderEventMessage(event)}
               </div>
-            ))}
+            )}
           </div>
-
-          {runStarted && (
-            <div>
-              <span className="mr-5 animate-in">
-                {"--- [AI Storyteller Has Started] ---"}
-              </span>
-              <br />
-            </div>
-          )}
         </div>
-      </div>
+      )}
     </div>
   );
 }

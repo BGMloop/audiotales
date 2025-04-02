@@ -1,0 +1,28 @@
+tools: fetch, sys.write
+description: Converts text to speech using the zonos-tts-mcp service
+args: text: (required) The text to convert to speech
+args: voice: (required) The voice to use for the speech
+args: output: (required) The output file path to save the audio to
+
+# Call the text-to-speech service
+const response = await fetch("http://localhost:3001/api/tts", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    text: "${text}",
+    voice: "${voice}"
+  })
+});
+
+if (!response.ok) {
+  throw new Error(`Failed to convert text to speech: ${response.statusText}`);
+}
+
+const audioBlob = await response.blob();
+const arrayBuffer = await audioBlob.arrayBuffer();
+const uint8Array = new Uint8Array(arrayBuffer);
+
+// Save the audio to the output file
+await sys.write("${output}", uint8Array); 

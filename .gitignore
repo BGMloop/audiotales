@@ -92,5 +92,9 @@ components/
 # lib
 lib/
 
+#  story-book.gpt
+app/api/run-script/story-book.gpt
 
+# route.ts
+app/api/run-script/route.ts
 
