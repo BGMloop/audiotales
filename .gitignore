@@ -98,3 +98,8 @@ app/api/run-script/story-book.gpt
 # route.ts
 app/api/run-script/route.ts
 
+# MCP
+mcp/
+mcp.json
+mcp.json.global
+

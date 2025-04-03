@@ -9,7 +9,7 @@ const storiesPath = "public/stories";
 
 import renderEventMessage from "@/lib/renderEventMessage";
 import { Frame } from "@gptscript-ai/gptscript";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Select,
   SelectContent,
@@ -23,38 +23,64 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 function StoryWriter() {
-  const [story, setStory] = useState<string>();
+  const [story, setStory] = useState<string>("");
   const [events, setEvents] = useState<Frame[]>([]);
   const [progress, setProgress] = useState("");
   const [currentTool, setCurrentTool] = useState("");
   const [pages, setPages] = useState<number>();
   const [runFinished, setRunFinished] = useState<boolean | null>(null);
   const [runStarted, setRunStarted] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [contentFilterError, setContentFilterError] = useState<string | null>(null);
 
   const router = useRouter();
 
-  async function handleStream(
+  const handleStream = useCallback(async (
     reader: ReadableStreamDefaultReader<Uint8Array>,
     decoder: TextDecoder
-  ) {
+  ) => {
+    let buffer = "";
+
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
 
-      // Explanation: The decoder is used to decode the Uint8Array into a string.
+      // Decode the chunk and add it to our buffer
       const chunk = decoder.decode(value, { stream: true });
+      buffer += chunk;
 
-      // Explanation: We split the chunk into events by splitting it by the event: keyword.
-      const eventData = chunk
-        .split("\n\n")
-        .filter((line) => line.startsWith("event: "))
-        .map((line) => line.replace(/^event: /, ""));
+      // Try to extract complete events from the buffer
+      const events = [];
+      const regex = /event: ({.+?})\n\n/g;
+      let match;
 
-      // Explanation: We parse the JSON data and update the state accordingly.
-      eventData.forEach((data) => {
+      while ((match = regex.exec(buffer)) !== null) {
         try {
-          const parsedData = JSON.parse(data);
-          if (parsedData.type === "callProgress") {
+          // Extract the JSON string
+          const jsonStr = match[1];
+          // Parse the JSON
+          const parsedData = JSON.parse(jsonStr);
+          events.push(parsedData);
+        } catch (error) {
+          // If we can't parse this event, just skip it
+          console.error("Failed to parse JSON", error);
+        }
+      }
+
+      // Remove processed events from the buffer
+      buffer = buffer.replace(regex, "");
+
+      // Process the valid events
+      events.forEach(parsedData => {
+        try {
+          if (parsedData.type === "contentFilterError") {
+            // Handle content filter error
+            setContentFilterError(parsedData.message);
+            setRunFinished(true);
+            setRunStarted(false);
+            setIsLoading(false);
+            toast.error("Content filter error: " + parsedData.message);
+          } else if (parsedData.type === "callProgress") {
             setProgress(
               parsedData.output[parsedData.output.length - 1].content
             );
@@ -63,58 +89,97 @@ function StoryWriter() {
             setCurrentTool(parsedData.tool?.description || "");
           } else if (parsedData.type === "runFinish") {
             setRunFinished(true);
-
             setRunStarted(false);
+            setIsLoading(false);
           } else {
             // Explain: We update the events state with the parsed data.
             setEvents((prevEvents) => [...prevEvents, parsedData]);
           }
         } catch (error) {
-          console.error("Failed to parse JSON", error);
+          console.error("Error processing event data:", error);
         }
       });
     }
-  }
+  }, []);
 
-  async function runScript() {
+  const runScript = useCallback(async () => {
     setRunStarted(true);
     setRunFinished(false);
+    setIsLoading(true);
+    setEvents([]);
+    setContentFilterError(null);
 
-    const response = await fetch("/api/run-script", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ story, pages, path: storiesPath }),
-    });
+    try {
+      const response = await fetch("/api/run-script", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ story, pages, path: storiesPath }),
+      });
 
-    if (response.ok && response.body) {
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
+      if (response.ok) {
+        const contentType = response.headers.get("Content-Type");
+        
+        // Check if the response is a JSON (content filter error)
+        if (contentType && contentType.includes("application/json")) {
+          const data = await response.json();
+          if (data.error === "contentFilterError") {
+            setContentFilterError(data.message);
+            setRunFinished(true);
+            setRunStarted(false);
+            setIsLoading(false);
+            toast.error("Content filter error: " + data.message);
+            return;
+          }
+        }
+        
+        // If it's a stream, process it
+        if (response.body) {
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
 
-      handleStream(reader, decoder);
-      console.log("Streaming started");
-    } else {
+          handleStream(reader, decoder);
+          console.log("Streaming started");
+        } else {
+          setRunFinished(true);
+          setRunStarted(false);
+          setIsLoading(false);
+          console.error("Response body is null");
+          toast.error("Failed to generate story. Please try again.");
+        }
+      } else {
+        setRunFinished(true);
+        setRunStarted(false);
+        setIsLoading(false);
+        console.error("Failed to start streaming");
+        toast.error("Failed to generate story. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error running script:", error);
       setRunFinished(true);
       setRunStarted(false);
-      console.error("Failed to start streaming");
+      setIsLoading(false);
+      toast.error("An error occurred while generating your story.");
     }
-  }
+  }, [story, pages, handleStream]);
 
   useEffect(() => {
     if (runFinished) {
-      toast.success("Story generated successfully!", {
-        action: (
-          <Button
-            onClick={() => router.push("/stories")}
-            className="bg-purple-500 ml-auto"
-          >
-            View Stories
-          </Button>
-        ),
-      });
+      if (!contentFilterError) {
+        toast.success("Story generated successfully!", {
+          action: (
+            <Button
+              onClick={() => router.push("/stories")}
+              className="bg-purple-500 ml-auto"
+            >
+              View Stories
+            </Button>
+          ),
+        });
+      }
     }
-  }, [runFinished, router]);
+  }, [runFinished, router, contentFilterError]);
 
   return (
     <div className="flex flex-col container">
@@ -124,9 +189,13 @@ function StoryWriter() {
           onChange={(e) => setStory(e.target.value)}
           placeholder="Write a story about a robot and a human who become friends..."
           className="text-black flex-1"
+          disabled={isLoading}
         />
 
-        <Select onValueChange={(value) => setPages(parseInt(value))}>
+        <Select 
+          onValueChange={(value) => setPages(parseInt(value))}
+          disabled={isLoading}
+        >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="How many pages should the story be?" />
           </SelectTrigger>
@@ -145,56 +214,68 @@ function StoryWriter() {
           size="lg"
           onClick={runScript}
         >
-          {runStarted ? "Generating Story..." : "Generate Story"}
+          {isLoading ? (
+            <span>Generating Story... Please wait</span>
+          ) : (
+            "Generate Story"
+          )}
         </Button>
       </section>
 
       {/* --- AI VIEWER --- */}
-      {showLogs && (
-        <div className="flex-1 pb-5 mt-5">
-          {runFinished && <div>Run Finished</div>}
+      <div className="flex-1 pb-5 mt-5">
+        {runFinished && !contentFilterError && (
+          <div className="text-green-500 font-bold mb-2">Story Generated Successfully!</div>
+        )}
+        
+        {contentFilterError && (
+          <div className="text-red-500 font-bold mb-2 p-4 border border-red-300 rounded bg-red-50">
+            <h3 className="text-lg mb-2">Content Filter Alert</h3>
+            <p>{contentFilterError}</p>
+            <p className="mt-2 text-sm">Please try a different story idea that's more appropriate for children.</p>
+          </div>
+        )}
 
-          <div className="flex flex-col-reverse w-full space-y-2 bg-gray-800 rounded-md text-gray-200 font-mono p-10 h-96 overflow-y-scroll">
-            <div>
-              {runFinished === null && (
-                <>
-                  <span className="mr-5 animate-pulse">
-                    Im waiting for you to Generate a story above...
-                  </span>
-                  <br />
-                </>
-              )}
-              <span className="mr-5">{">>"}</span>
-              {progress}
-            </div>
-
-            {currentTool && (
-              <div className="py-10">
-                <span className="mr-5">{"--- [Current Tool] ---"}</span>
-                {currentTool}
-              </div>
-            )}
-            {/* --- AI renderEventMessage Events Helper --- */}
-            <div className="space-y-5">
-              {events.map((event, index) => (
-                <div key={index} className="flex">
-                  <span className="mr-5">{">>"}</span>
-                  {renderEventMessage(event)}
-                </div>
-              ))}
-            </div>
-
-            {runStarted && (
-              <div>
-                <span className="mr-5 animate-in">
-                  {"--- [AI AudioTales Has Started] ---"}
+        <div className="flex flex-col-reverse w-full space-y-2 bg-gray-800 rounded-md text-gray-200 font-mono p-10 h-96 overflow-y-scroll">
+          <div>
+            {runFinished === null && (
+              <>
+                <span className="mr-5 animate-pulse">
+                  I'm waiting for you to generate a story above...
                 </span>
                 <br />
-              </div>
+              </>
             )}
+            <span className="mr-5">{">>"}</span>
+            {progress}
           </div>
+
+          {currentTool && (
+            <div className="py-10">
+              <span className="mr-5">{"--- [Current Tool] ---"}</span>
+              {currentTool}
+            </div>
+          )}
+
+          <div className="space-y-5">
+            {events.map((event, index) => (
+              <div key={`event-${index}`} className="flex">
+                <span className="mr-5">{">>"}</span>
+                {renderEventMessage(event)}
+              </div>
+            ))}
+          </div>
+
+          {runStarted && (
+            <div>
+              <span className="mr-5 animate-in">
+                {"--- [AI Storyteller Has Started] ---"}
+              </span>
+              <br />
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
