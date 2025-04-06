@@ -37,3 +37,27 @@ next-env.d.ts
 
 /stories
 /public/stories
+
+# TTS files - YO DONT LOOK AT MY API KEYS LOL
+/public/tts
+*.mp3
+*.wav
+/custom-voices
+/models/tts
+.tts-cache
+app/api/speak/route.ts
+**/custom-voices/
+**/voice-samples/
+TEXT_TO_SPEECH_API_KEY
+OPENAI_API_KEY
+
+# MCP - DONT TOUCH MY STUFF
+mcp/
+mcp.json
+.cursor/
+
+# Yo these are my secret sauce files
+app/api/run-script/zonos-tts-mcp.js
+app/api/run-script/zonos-tts-mcp.gpt
+app/api/run-script/zonos-tts-mcp
+app/api/tts/route.js
