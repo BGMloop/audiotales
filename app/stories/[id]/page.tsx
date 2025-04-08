@@ -1,34 +1,68 @@
 import { notFound } from "next/navigation";
-import Story from "@/components/Story";
-import { getAllStories, getStory } from "@/lib/stories";
+import { Metadata, ResolvingMetadata } from "next";
+import StoryClientPage from "./client";
 
-interface StoryPageProps {
-  params: {
-    id: string;
-  };
+interface Props {
+  params: { id: string };
 }
 
-export default function StoryPage({ params }: StoryPageProps) {
-  const { id } = params;
+// Helper function to safely decode story name
+function decodeStoryName(name: string): string {
+  try {
+    return decodeURIComponent(name);
+  } catch (error) {
+    console.error('[Debug] Error decoding story name:', error);
+    throw error;
+  }
+}
 
-  // Explanation: The id is URL encoded, so we need to decode it before using it to get the story. This fixes the issue where the story is not found when the id contains special characters such as %20 for spaces.
-  const decodedId = decodeURIComponent(id);
+export async function generateMetadata(
+  { params }: Props,
+  parent: ResolvingMetadata
+): Promise<Metadata> {
+  try {
+    const storyName = decodeStoryName(params.id);
+    
+    return {
+      title: `Story: ${storyName}`,
+      description: `Read the story: ${storyName}`,
+      openGraph: {
+        title: `Story: ${storyName}`,
+        description: `Read the story: ${storyName}`,
+        type: 'article',
+      },
+      twitter: {
+        card: 'summary',
+        title: `Story: ${storyName}`,
+        description: `Read the story: ${storyName}`,
+      },
+    };
+  } catch (error) {
+    console.error('[Debug] Error generating metadata:', error);
+    return {
+      title: 'Error Loading Story',
+      description: 'There was an error loading the story metadata',
+    };
+  }
+}
 
-  const story = getStory(decodedId);
-
-  if (!story) {
+export default function StoryPage({ params }: Props) {
+  if (!params?.id) {
     return notFound();
   }
-
-  return <Story story={story} />;
-}
-
-export async function generateStaticParams() {
-  const stories = getAllStories();
-
-  const paths = stories.map((story) => ({
-    id: story.story,
-  }));
-
-  return paths;
+  
+  try {
+    // We use the id param as the story name
+    const storyName = decodeStoryName(params.id);
+    return <StoryClientPage storyId={storyName} />;
+  } catch (error) {
+    console.error('[Debug] Error rendering StoryPage:', error);
+    // Use a direct component instead of notFound() to avoid template variable issues
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-4">
+        <h2 className="text-3xl font-bold mb-4">Story Not Found</h2>
+        <p className="mb-6">Sorry, we couldn't find the specific story you're looking for.</p>
+      </div>
+    );
+  }
 }

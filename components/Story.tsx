@@ -35,18 +35,15 @@ import { Slider } from "@/components/ui/slider";
 
 // Available voices
 const VOICES = [
-  { id: 'ashley', name: 'Ashley (Default)' },
-  { id: 'nova', name: 'Nova' },
-  { id: 'alloy', name: 'Alloy' },
-  { id: 'echo', name: 'Echo' },
-  { id: 'fable', name: 'Fable' },
-  { id: 'onyx', name: 'Onyx' },
-  { id: 'shimmer', name: 'Shimmer' },
-  { id: 'ballad', name: 'Ballad' },
-  { id: 'coral', name: 'Coral' },
-  { id: 'sage', name: 'Sage' },
-  { id: 'ash', name: 'Ash' },
-  { id: 'verse', name: 'Verse' }
+  { id: 'nova', name: 'Nova (Default)(Female)' },
+  { id: 'ash', name: 'Ash (Default)(Male)' },
+  { id: 'sage', name: 'Sage (Default2)(Female)' },
+  { id: 'onyx', name: 'Onyx (Default2)(Male)' },
+  { id: 'alloy', name: 'Alloy (Male)' },
+  { id: 'echo', name: 'Echo (Male)' },
+  { id: 'fable', name: 'Fable (Female)' },
+  { id: 'shimmer', name: 'Shimmer (Female)' },
+  { id: 'coral', name: 'Coral (Female)' }
 ];
 
 interface Props {

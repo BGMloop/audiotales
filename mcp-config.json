@@ -1,0 +1,96 @@
+{
+  "servers": {
+    "browser-tools-mcp-local": {
+      "type": "http",
+      "host": "127.0.0.1",
+      "port": 3025,
+      "endpoints": {
+        "getConsoleLogs": {
+          "method": "GET",
+          "path": "/console-logs"
+        }
+      }
+    },
+    "zonos-text-to-speech-mcp": {
+      "type": "http",
+      "host": "127.0.0.1",
+      "port": 3026,
+      "endpoints": {
+        "speak_response": {
+          "method": "POST",
+          "path": "/speak",
+          "requestFormat": "json",
+          "responseFormat": "json",
+          "parameters": {
+            "text": {"type": "string", "required": true},
+            "language": {"type": "string", "default": "en-us"},
+            "emotion": {"type": "string", "default": "neutral"},
+            "voice": {"type": "string", "default": "Victoria"},
+            "rate": {"type": "number", "default": 175},
+            "volume": {"type": "number", "default": 1.0},
+            "pitch": {"type": "number", "default": 0},
+            "emphasis": {"type": "string", "enum": ["none", "strong", "moderate", "reduced"], "default": "none"},
+            "background": {"type": "boolean", "default": false}
+          }
+        },
+        "list_voices": {
+          "method": "GET",
+          "path": "/voices",
+          "responseFormat": "json"
+        },
+        "stop_speech": {
+          "method": "POST",
+          "path": "/stop",
+          "responseFormat": "json"
+        },
+        "pause_speech": {
+          "method": "POST",
+          "path": "/pause",
+          "responseFormat": "json"
+        },
+        "resume_speech": {
+          "method": "POST",
+          "path": "/resume",
+          "responseFormat": "json"
+        },
+        "get_status": {
+          "method": "GET",
+          "path": "/status",
+          "responseFormat": "json"
+        }
+      }
+    },
+    "transcriptiontools-mcp": {
+      "type": "http",
+      "host": "127.0.0.1",
+      "port": 3027,
+      "endpoints": {
+        "repair_text": {
+          "method": "POST",
+          "path": "/repair",
+          "requestFormat": "json",
+          "responseFormat": "json",
+          "parameters": {
+            "input_text": {"type": "string", "required": true},
+            "is_file_path": {"type": "boolean", "default": false}
+          }
+        }
+      }
+    },
+    "google-scholar-mcp-server": {
+      "type": "http",
+      "host": "127.0.0.1",
+      "port": 3028,
+      "endpoints": {
+        "get_author_info": {
+          "method": "GET",
+          "path": "/author/{name}",
+          "responseFormat": "json",
+          "parameters": {
+            "name": {"type": "string", "required": true}
+          }
+        }
+      }
+    }
+  }
+} 
