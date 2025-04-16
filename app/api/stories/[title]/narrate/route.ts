@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { NarrationService } from "@/lib/narrationService";
 import path from "path";
 import fs from "fs";
@@ -23,13 +23,16 @@ function logError(context: string, error: any, additionalInfo: any = {}) {
 }
 
 export async function POST(
-  request: Request,
-  { params }: { params: { title: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ title: string }> }
 ) {
   const startTime = Date.now();
+  let resolvedParams: { title: string } = { title: '' };
+  
   try {
-    // Ensure params.title is awaited and decoded
-    const title = await Promise.resolve(params.title);
+    // Resolve params if it's a Promise
+    resolvedParams = await params;
+    const title = resolvedParams.title;
     console.log('Starting narration generation for:', title);
     
     const body = await request.json();
@@ -134,7 +137,7 @@ export async function POST(
       processingTime: endTime - startTime
     });
   } catch (error) {
-    logError('Narration endpoint', error, { title: params.title });
+    logError('Narration endpoint', error, { title: resolvedParams?.title });
     return NextResponse.json(
       { 
         error: error instanceof Error ? error.message : 'Failed to generate narration',

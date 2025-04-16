@@ -37,7 +37,7 @@ Return your story, illustration style, and character descriptions.
 ---
 name: story-illustrator
 tools: github.com/sonnysangha/dalle-image-generation
-description: Generates an illustration for a children's story
+description: Generates a illustration for a children's story
 temperature: 1
 args: text: The text of the page to illustrate
 args: characters: The characters of the story and their physical appearance
@@ -62,8 +62,6 @@ tools: sys.write
 description: Creates a specified directory
 args: dir: Path to the directory to be created. Will create parent directories.
 
-#!powershell
+#!bash
 
-if (!(Test-Path "${dir}")) {
-  New-Item -ItemType Directory -Path "${dir}" -Force
-}
+mkdir -p "${dir}"

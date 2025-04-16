@@ -1,35 +1,56 @@
 import { BookOpen, FilePen } from "lucide-react";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+
+// NavIconButton component for reusable navigation icons
+interface NavIconButtonProps {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+}
+
+function NavIconButton({ href, label, icon: Icon }: NavIconButtonProps) {
+  return (
+    <Button variant="outline" size="icon" asChild aria-label={label}>
+      <Link href={href}>
+        <Icon className="h-5 w-5" />
+      </Link>
+    </Button>
+  );
+}
 
 function Header() {
   return (
-    <header className="relative p-16 text-center">
-      <Link href="/">
-        <h1 className="text-6xl font-black">StoryTeller AI</h1>
-        <div className="flex space-x-5 text-3xl lg:text-5xl justify-center whitespace-nowrap">
-          <h2>Bringing your stories</h2>
-          <div className="relative">
-            <div className="absolute bg-purple-500 -left-2 -top-1 -bottom-1 -right-2 md:-left-3 md:-top-0 md:-bottom-0 md:-right-3 -rotate-1 h-" />
-            <div className="relative text-white">To life!</div>
+    <header className="container mx-auto py-4 md:py-6 border-b border-border">
+      <div className="flex justify-between items-center">
+        {/* Brand Section */}
+        <Link href="/" className="flex flex-col items-start group">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white">
+            AudioTales AI
+          </h1>
+          {/* Tagline using spans for better semantics */}
+          <div className="flex flex-wrap space-x-2 text-lg md:text-xl lg:text-2xl text-muted-foreground mt-1">
+            <span>Your stories,</span>
+            <span className="relative inline-block px-2 py-0.5 bg-primary text-primary-foreground rounded-md -rotate-1 transform">
+              Illustrated & Narrated!
+            </span>
           </div>
-        </div>
-      </Link>
-
-      <div className="absolute -top-5 right-5 flex space-x-2">
-        <Link href="/">
-          <FilePen className="w-8 h-8 lg:w-10 lg:h-10 mx-auto text-purple-500 mt-10 border border-purple-500 p-2 rounded-md hover:opacity-50 cursor-pointer " />
         </Link>
 
-        <Link href="/stories">
-          <BookOpen className="w-8 h-8 lg:w-10 lg:h-10 mx-auto text-purple-500 mt-10 border border-purple-500 p-2 rounded-md  hover:opacity-50 cursor-pointer" />
-        </Link>
+        {/* Navigation Icons Section */}
+        <nav className="flex items-center space-x-2 md:space-x-3">
+          <NavIconButton 
+            href="/" 
+            label="Create New Story" 
+            icon={FilePen} 
+          />
+          <NavIconButton 
+            href="/stories" 
+            label="View Story Library" 
+            icon={BookOpen} 
+          />
+        </nav>
       </div>
-
-      {/* <p className="italic mt-2">
-          Combine Several AI tools with{" "}
-          <span className="text-purple-500">GPTScript</span>, a framework that
-          allows LLMs to operate & interact with multiple various systems.
-        </p> */}
     </header>
   );
 }

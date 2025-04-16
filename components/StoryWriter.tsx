@@ -8,7 +8,6 @@ const showLogs = true;
 const storiesPath = "public/stories";
 
 import renderEventMessage from "@/lib/renderEventMessage";
-import { Frame } from "@gptscript-ai/gptscript";
 import { useCallback, useEffect, useState } from "react";
 import {
   Select,
@@ -21,76 +20,75 @@ import { Textarea } from "./ui/textarea";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { EventType } from '@/lib/renderEventMessage';
 
 function StoryWriter() {
   const [story, setStory] = useState<string>("");
-  const [events, setEvents] = useState<Frame[]>([]);
+  const [events, setEvents] = useState<EventType[]>([]);
   const [progress, setProgress] = useState("");
   const [currentTool, setCurrentTool] = useState("");
   const [pages, setPages] = useState<number>();
   const [runFinished, setRunFinished] = useState<boolean | null>(null);
   const [runStarted, setRunStarted] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<{ code: string; message: string; details?: string } | null>(null);
+  const [contentFilterError, setContentFilterError] = useState<string | null>(null);
+  const [estimatedTime, setEstimatedTime] = useState<string>("");
 
   const router = useRouter();
 
-  const handleStream = useCallback(async (
-    reader: ReadableStreamDefaultReader<Uint8Array>,
-    decoder: TextDecoder
-  ) => {
-    let buffer = "";
+  // Calculate estimated time based on number of pages
+  useEffect(() => {
+    if (pages) {
+      // Estimate: ~1 minute per page for text generation + ~30 seconds per page for DALL-E image
+      const totalMinutes = pages * 1.5;
+      setEstimatedTime(`Estimated time: ${totalMinutes.toFixed(1)} minutes`);
+    } else {
+      setEstimatedTime("");
+    }
+  }, [pages]);
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      // Decode the chunk and add it to our buffer
-      const chunk = decoder.decode(value, { stream: true });
-      buffer += chunk;
-
-      // Process complete data events from the buffer
-      const lines = buffer.split('\n');
-      buffer = '';
-      
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          try {
-            const jsonStr = line.slice(6); // Remove 'data: ' prefix
-            const parsedData = JSON.parse(jsonStr);
-
-            if (parsedData.type === "error") {
-              setError(parsedData);
-              setRunFinished(true);
-              setRunStarted(false);
-              setIsLoading(false);
-              
-              let errorMessage = parsedData.message;
-              if (parsedData.details) {
-                errorMessage += `: ${parsedData.details}`;
-              }
-              
-              toast.error(errorMessage);
-            } else if (parsedData.type === "callProgress") {
-              setProgress(
-                parsedData.output[parsedData.output.length - 1].content
-              );
-              setCurrentTool(parsedData.tool?.description || "");
-            } else if (parsedData.type === "callStart") {
-              setCurrentTool(parsedData.tool?.description || "");
-            } else if (parsedData.type === "runFinish") {
-              setRunFinished(true);
-              setRunStarted(false);
-              setIsLoading(false);
-            } else {
-              // Update events state with the parsed data
-              setEvents((prevEvents) => [...prevEvents, parsedData]);
-            }
-          } catch (error) {
-            console.error("Error processing event data:", error);
-          }
+  const handleStream = useCallback(async (reader: ReadableStreamDefaultReader<Uint8Array>, decoder: TextDecoder) => {
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          console.log("Stream complete");
+          break;
         }
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n\n");
+
+        lines.forEach((line) => {
+          if (line.startsWith("event: ")) {
+            try {
+              const eventData = line.slice(7); // Remove "event: " prefix
+              const parsedData = JSON.parse(eventData);
+              
+              if (parsedData.type === "progress") {
+                setProgress(parsedData.message);
+              } else if (parsedData.type === "tool") {
+                setCurrentTool(parsedData.message);
+              } else if (parsedData.type === "runFinish") {
+                setRunFinished(true);
+                setRunStarted(false);
+                setIsLoading(false);
+              } else {
+                setEvents((prevEvents) => [...prevEvents, parsedData]);
+              }
+            } catch (error) {
+              console.error("Error processing event data:", error);
+            }
+          }
+        });
       }
+    } catch (error) {
+      console.error("Stream reading error:", error);
+      setRunFinished(true);
+      setRunStarted(false);
+      setIsLoading(false);
+      toast.error("Lost connection to the story generator. Please try again.");
     }
   }, []);
 
@@ -99,7 +97,10 @@ function StoryWriter() {
     setRunFinished(false);
     setIsLoading(true);
     setEvents([]);
-    setError(null);
+    setContentFilterError(null);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
 
     try {
       const response = await fetch("/api/run-script", {
@@ -108,58 +109,52 @@ function StoryWriter() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ story, pages, path: storiesPath }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
-        const errorData = await response.json();
-        setError({
-          code: "API_ERROR",
-          message: errorData.error || "Failed to generate story",
-          details: errorData.details
-        });
-        setRunFinished(true);
-        setRunStarted(false);
-        setIsLoading(false);
-        toast.error(errorData.error || "Failed to generate story. Please try again.");
-        return;
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.details || 'Failed to generate story');
       }
 
-      // Process the stream
-      if (response.body) {
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-
-        await handleStream(reader, decoder);
-        console.log("Streaming completed");
-      } else {
-        setError({
-          code: "STREAM_ERROR",
-          message: "Failed to generate story",
-          details: "Response body is null"
-        });
-        setRunFinished(true);
-        setRunStarted(false);
-        setIsLoading(false);
-        console.error("Response body is null");
-        toast.error("Failed to generate story. Please try again.");
+      const contentType = response.headers.get("Content-Type");
+      
+      if (contentType?.includes("application/json")) {
+        const data = await response.json();
+        if (data.error === "contentFilterError") {
+          setContentFilterError(data.message);
+          toast.error("Content filter error: " + data.message);
+          return;
+        }
+        throw new Error(data.details || 'Unexpected JSON response');
       }
+      
+      if (!response.body) {
+        throw new Error('Response body is null');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      console.log("Streaming started");
+      await handleStream(reader, decoder);
+      
     } catch (error) {
       console.error("Error running script:", error);
-      setError({
-        code: "NETWORK_ERROR",
-        message: "Failed to connect to the server",
-        details: error instanceof Error ? error.message : "Unknown error"
-      });
+      toast.error(error instanceof Error ? error.message : "An error occurred while generating your story.");
+    } finally {
       setRunFinished(true);
       setRunStarted(false);
       setIsLoading(false);
-      toast.error("Network error. Please check your connection and try again.");
+      clearTimeout(timeoutId);
     }
   }, [story, pages, handleStream]);
 
   useEffect(() => {
     if (runFinished) {
-      if (!error) {
+      if (!contentFilterError) {
         toast.success("Story generated successfully!", {
           action: (
             <Button
@@ -172,7 +167,7 @@ function StoryWriter() {
         });
       }
     }
-  }, [runFinished, router, error]);
+  }, [runFinished, router, contentFilterError]);
 
   return (
     <div className="flex flex-col container">
@@ -201,6 +196,12 @@ function StoryWriter() {
           </SelectContent>
         </Select>
 
+        {estimatedTime && (
+          <div className="text-sm text-gray-600 mt-2 mb-4">
+            {estimatedTime}
+          </div>
+        )}
+
         <Button
           disabled={!story || !pages || runStarted}
           className="w-full"
@@ -217,17 +218,15 @@ function StoryWriter() {
 
       {/* --- AI VIEWER --- */}
       <div className="flex-1 pb-5 mt-5">
-        {runFinished && !error && (
+        {runFinished && !contentFilterError && (
           <div className="text-green-500 font-bold mb-2">Story Generated Successfully!</div>
         )}
         
-        {error && (
+        {contentFilterError && (
           <div className="text-red-500 font-bold mb-2 p-4 border border-red-300 rounded bg-red-50">
-            <h3 className="text-lg mb-2">Error</h3>
-            <p>{error.message}</p>
-            {error.details && (
-              <p className="mt-2 text-sm">{error.details}</p>
-            )}
+            <h3 className="text-lg mb-2">Content Filter Alert</h3>
+            <p>{contentFilterError}</p>
+            <p className="mt-2 text-sm">Please try a different story idea that's more appropriate for children.</p>
           </div>
         )}
 

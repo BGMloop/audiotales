@@ -1,0 +1,27 @@
+tools: sys.curl
+description: Generates images using OpenAI's DALL-E model
+args: prompt: The image prompt to use for generation
+
+# Make a request to our local API endpoint that will handle the DALL-E request
+local_response=$(curl -s -X POST "http://localhost:3000/api/dalle-image" \
+  -H "Content-Type: application/json" \
+  -d "{\"prompt\": \"${prompt}\"}")
+
+# Extract the URL from the response
+url=$(echo $local_response | grep -o '"url":"[^"]*"' | sed 's/"url":"\(.*\)"/\1/')
+error=$(echo $local_response | grep -o '"error":"[^"]*"' | sed 's/"error":"\(.*\)"/\1/')
+
+# Check if we got an error
+if [[ -n "$error" ]]; then
+  echo "Error generating image: $error"
+  exit 1
+fi
+
+# Check if we got a URL
+if [[ -z "$url" ]]; then
+  echo "Error: No image URL returned"
+  exit 1
+fi
+
+# Output just the URL
+echo $url 

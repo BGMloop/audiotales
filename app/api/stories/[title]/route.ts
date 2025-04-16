@@ -3,33 +3,22 @@ import { getStoryFromFS } from '@/lib/server/stories';
 import { headers } from 'next/headers';
 
 interface RouteContext {
-  params: {
-    title: Promise<string> | string;
-  };
+  params: Promise<{
+    title: string;
+  }>;
 }
 
 // Cache for story data
 const storyCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 
-// Helper function to safely resolve and decode title
-async function resolveAndDecodeTitle(title: Promise<string> | string): Promise<string> {
-  const start = performance.now();
+// Helper function to safely decode title
+function decodeTitle(title: string): string {
   try {
-    const resolvedTitle = typeof title === 'string' ? title : await title;
-    
-    if (!resolvedTitle) {
-      throw new Error('No title provided');
-    }
-
-    const decodedTitle = decodeURIComponent(resolvedTitle);
-    const resolveTime = performance.now() - start;
-    console.log(`[Debug] Title resolution took ${resolveTime.toFixed(2)}ms:`, decodedTitle);
-    
-    return decodedTitle;
+    return decodeURIComponent(title);
   } catch (error) {
-    console.error('[Debug] Error resolving title:', error);
-    throw error;
+    console.error('[Debug] Error decoding title:', error);
+    return title; // Return original if decoding fails
   }
 }
 
@@ -67,7 +56,8 @@ export async function GET(request: Request, context: RouteContext) {
     });
 
     // First, resolve and decode the title
-    const decodedTitle = await resolveAndDecodeTitle(context.params.title);
+    const resolvedParams = await context.params;
+    const decodedTitle = decodeTitle(resolvedParams.title);
     console.log('[Debug] Resolved title:', decodedTitle);
     
     // Get the story (from cache or fetch new)

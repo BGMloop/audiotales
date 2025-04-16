@@ -1,9 +1,13 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function StarsBackground() {
+    const [isMounted, setIsMounted] = useState(false);
+
     useEffect(() => {
+        setIsMounted(true);
+        
         // Create style element
         const style = document.createElement("style");
         // Add the complete CSS
@@ -118,8 +122,14 @@ export default function StarsBackground() {
         // Clean up on unmount
         return () => {
             document.head.removeChild(style);
+            setIsMounted(false);
         };
     }, []);
+
+    // Don't render anything until mounted
+    if (!isMounted) {
+        return null;
+    }
 
     return (
         <div className="stars-container">

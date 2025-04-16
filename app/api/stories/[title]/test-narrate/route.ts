@@ -15,12 +15,13 @@ function logError(context: string, error: any, additionalInfo: any = {}) {
 
 export async function POST(
   request: Request,
-  { params }: { params: { title: string } }
+  { params }: { params: Promise<{ title: string }> }
 ) {
   const startTime = Date.now();
   try {
-    // Ensure params.title is awaited and decoded
-    const title = await Promise.resolve(params.title);
+    // Resolve params since it's a Promise
+    const resolvedParams = await params;
+    const title = resolvedParams.title;
     console.log('Starting test narration for:', title);
     
     const body = await request.json();
@@ -84,7 +85,16 @@ export async function POST(
       processingTime: endTime - startTime
     });
   } catch (error) {
-    logError('Test narration endpoint', error, { title: params.title });
+    // Get the title safely
+    let titleValue = 'unknown';
+    try {
+      const resolvedParams = await params;
+      titleValue = resolvedParams.title;
+    } catch (e) {
+      console.error('Error retrieving title for error logging:', e);
+    }
+    
+    logError('Test narration endpoint', error, { title: titleValue });
     return NextResponse.json(
       { 
         error: "Failed to test narration",

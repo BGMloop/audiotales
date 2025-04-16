@@ -69,7 +69,7 @@ export async function exportStoryAsPDF(story: Story): Promise<void> {
   
   // Add subtitle
   pdf.setFontSize(12);
-  pdf.text('A children\'s story created with AI', pdf.internal.pageSize.getWidth() / 2, 40, { align: 'center' });
+  pdf.text('A children\'s story created with AudioTales AI', pdf.internal.pageSize.getWidth() / 2, 40, { align: 'center' });
   
   // Try to add the first image as cover if available
   if (story.pages.length > 0) {
@@ -193,7 +193,7 @@ export async function exportMultipleStories(stories: Story[]): Promise<void> {
   const zip = new JSZip();
   
   // Create a folder for all stories
-  const storiesFolder = zip.folder('AI-Storyteller-Collection');
+  const storiesFolder = zip.folder('AudioTales-Collection');
   if (!storiesFolder) return;
   
   // Add an index file with all story titles
@@ -246,7 +246,7 @@ export async function exportMultipleStories(stories: Story[]): Promise<void> {
   
   // Generate and save the ZIP file
   const content = await zip.generateAsync({ type: 'blob' });
-  saveAs(content, `AI-Storyteller-Collection.zip`);
+  saveAs(content, `AudioTales-Collection.zip`);
 }
 
 /**

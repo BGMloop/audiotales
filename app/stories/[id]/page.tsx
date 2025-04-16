@@ -3,7 +3,7 @@ import { Metadata, ResolvingMetadata } from "next";
 import StoryClientPage from "./client";
 
 interface Props {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 // Helper function to safely decode story name
@@ -21,7 +21,8 @@ export async function generateMetadata(
   parent: ResolvingMetadata
 ): Promise<Metadata> {
   try {
-    const storyName = decodeStoryName(params.id);
+    const resolvedParams = await params;
+    const storyName = decodeStoryName(resolvedParams.id);
     
     return {
       title: `Story: ${storyName}`,
@@ -46,14 +47,16 @@ export async function generateMetadata(
   }
 }
 
-export default function StoryPage({ params }: Props) {
-  if (!params?.id) {
+export default async function StoryPage({ params }: Props) {
+  const resolvedParams = await params;
+  
+  if (!resolvedParams?.id) {
     return notFound();
   }
   
   try {
     // We use the id param as the story name
-    const storyName = decodeStoryName(params.id);
+    const storyName = decodeStoryName(resolvedParams.id);
     return <StoryClientPage storyId={storyName} />;
   } catch (error) {
     console.error('[Debug] Error rendering StoryPage:', error);
