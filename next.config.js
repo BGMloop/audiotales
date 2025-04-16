@@ -11,11 +11,10 @@ const nextConfig = {
   },
   skipTrailingSlashRedirect: true,
   skipMiddlewareUrlNormalize: true,
-  // Next.js 15 compatibility options
+  // Next.js experimental features
   experimental: {
     ppr: false,
-    esmExternals: true,
-    strictTemplateErrors: false,
+    esmExternals: true
   }
 };
 

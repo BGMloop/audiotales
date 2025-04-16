@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Story as StoryType } from "../types/stories";
 import Image from "next/image";
 import { Download, FileText, Share, Loader2, Play, Pause } from "lucide-react";
 import { toast } from "sonner";
 import { exportStoryAsZip, exportStoryAsPDF, shareStory } from "@/lib/exportStory";
-import { Howl } from 'howler';
+import { useAudio } from "@/lib/AudioContext";
+import type { EmblaCarouselType } from 'embla-carousel';
 
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -50,29 +51,27 @@ interface Props {
   story: StoryType;
 }
 
-function base64ToArrayBuffer(base64: string): ArrayBuffer {
-  const binaryString = window.atob(base64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes.buffer;
-}
-
 const Story = ({ story }: Props) => {
-  const [api, setApi] = useState<CarouselApi>();
+  const [api, setApi] = useState<EmblaCarouselType | null>(null);
   const [current, setCurrent] = useState(0);
   const [count, setCount] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
   const [isExportingPDF, setIsExportingPDF] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
-  const [selectedVoice, setSelectedVoice] = useState('nova');
   const [speed, setSpeed] = useState(1.0);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentSound, setCurrentSound] = useState<Howl | null>(null);
+  const transitioningRef = useRef(false);
+  const { 
+    currentVoice, 
+    setCurrentVoice, 
+    playAudio, 
+    stopAudio, 
+    isPlaying,
+    onAudioComplete,
+    pauseAudio
+  } = useAudio();
 
-  // Early return with more descriptive error message
+  // Early return checks
   if (!story) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -89,114 +88,7 @@ const Story = ({ story }: Props) => {
     );
   }
 
-  useEffect(() => {
-    if (!api) {
-      return;
-    }
-
-    setCount(api.scrollSnapList().length);
-    setCurrent(api.selectedScrollSnap() + 1);
-
-    api.on("select", () => {
-      const current = api.selectedScrollSnap() + 1;
-      setCurrent(current);
-      stopCurrentSound();
-    });
-  }, [api]);
-
-  const stopCurrentSound = () => {
-    if (currentSound) {
-      currentSound.stop();
-      setCurrentSound(null);
-      setIsPlaying(false);
-    }
-  };
-
-  const playPage = async (text: string) => {
-    try {
-      setIsLoading(true);
-      stopCurrentSound();
-
-      const response = await fetch('/api/speak', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          text,
-          voice: selectedVoice,
-          speed: speed
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate speech');
-      }
-
-      const data = await response.json();
-      if (!data.success || !data.audioData) {
-        throw new Error('Failed to get audio data');
-      }
-
-      // Convert base64 to blob URL
-      const audioBlob = new Blob(
-        [base64ToArrayBuffer(data.audioData)],
-        { type: 'audio/mpeg' }
-      );
-      const audioUrl = URL.createObjectURL(audioBlob);
-
-      const sound = new Howl({
-        src: [audioUrl],
-        format: ['mp3'],
-        html5: true,
-        onend: () => {
-          URL.revokeObjectURL(audioUrl);
-          setIsPlaying(false);
-          setCurrentSound(null);
-          if (current < count - 1) {
-            api?.scrollNext();
-          }
-        },
-        onloaderror: () => {
-          console.error('Failed to load audio');
-          URL.revokeObjectURL(audioUrl);
-          setIsLoading(false);
-          setIsPlaying(false);
-          toast.error('Failed to load audio. Please try again.');
-        },
-        onplayerror: () => {
-          console.error('Failed to play audio');
-          URL.revokeObjectURL(audioUrl);
-          setIsLoading(false);
-          setIsPlaying(false);
-          toast.error('Failed to play audio. Please try again.');
-        },
-        onload: () => {
-          setIsLoading(false);
-          sound.play();
-          setIsPlaying(true);
-        },
-      });
-
-      setCurrentSound(sound);
-    } catch (error) {
-      console.error('Error playing audio:', error);
-      setIsLoading(false);
-      setIsPlaying(false);
-      toast.error(error instanceof Error ? error.message : 'Failed to play audio. Please try again.');
-    }
-  };
-
-  const togglePlayPause = () => {
-    if (isPlaying) {
-      stopCurrentSound();
-    } else {
-      const currentPage = story.pages[current - 1];
-      playPage(currentPage.txt);
-    }
-  };
-
+  // Define functions first
   const handleExport = async () => {
     try {
       setIsExporting(true);
@@ -239,6 +131,167 @@ const Story = ({ story }: Props) => {
     }
   };
 
+  const playCurrentPage = useCallback(async () => {
+    if (!api || !story.pages || story.pages.length === 0) return;
+    
+    const currentIndex = api.selectedScrollSnap();
+    const pageNumber = currentIndex + 1; // Convert to 1-based page number
+    const currentPage = story.pages[currentIndex];
+    
+    if (!currentPage?.txt) return;
+
+    try {
+      setIsLoading(true);
+      const pageId = `${story.story}-page-${currentIndex}`;
+      
+      // Add page number announcement for all pages except the first
+      const textToSpeak = pageNumber === 1
+        ? currentPage.txt 
+        : `Page ${pageNumber}. ${currentPage.txt}`;
+      
+      console.log(`Playing page ${pageNumber} with${pageNumber === 1 ? 'out' : ''} announcement`);
+      
+      const response = await fetch('/api/speak', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: textToSpeak,
+          voice: currentVoice,
+          speed: speed
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate speech');
+      }
+
+      const data = await response.json();
+      if (!data.success || !data.audioData) {
+        throw new Error('Failed to get audio data');
+      }
+
+      await playAudio(data.audioData, pageId);
+    } catch (error) {
+      console.error('Error playing audio:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to play audio. Please try again.');
+      await stopAudio();
+    } finally {
+      setIsLoading(false);
+    }
+  }, [api, story.pages, story.story, currentVoice, speed, playAudio, stopAudio]);
+
+  const onNext = useCallback(async () => {
+    if (!api || !story.pages) return;
+    const nextIndex = api.selectedScrollSnap() + 1;
+    if (nextIndex < story.pages.length) {
+      transitioningRef.current = true;
+      stopAudio();
+      api.scrollTo(nextIndex);
+      transitioningRef.current = true;
+    } else {
+      await stopAudio();
+    }
+  }, [api, story.pages, stopAudio]);
+
+  const onPrev = useCallback(async () => {
+    if (!api || !story.pages) return;
+    const prevIndex = api.selectedScrollSnap() - 1;
+    if (prevIndex >= 0) {
+      transitioningRef.current = true;
+      await stopAudio();
+      api.scrollTo(prevIndex);
+    }
+  }, [api, story.pages, stopAudio]);
+
+  const togglePlayPause = useCallback(async () => {
+    if (isPlaying) {
+      await pauseAudio();
+    } else {
+      transitioningRef.current = false;
+      await playCurrentPage();
+    }
+  }, [isPlaying, pauseAudio, playCurrentPage]);
+
+  const handleVoiceChange = useCallback(async (value: string) => {
+    setCurrentVoice(value);
+    if (isPlaying) {
+      await stopAudio();
+      setTimeout(() => {
+        playCurrentPage();
+      }, 100);
+    }
+  }, [isPlaying, stopAudio, playCurrentPage, setCurrentVoice]);
+
+  // Effects after all function definitions
+  useEffect(() => {
+    if (!api) return;
+    
+    setCount(api.scrollSnapList().length);
+    const newCurrent = api.selectedScrollSnap() + 1;
+    setCurrent(newCurrent);
+
+    const handleScroll = () => {
+      const newIndex = api.selectedScrollSnap() + 1;
+      setCurrent(newIndex);
+    };
+
+    const handleSettle = () => {
+      if (isPlaying) {
+        playCurrentPage();
+      }
+      transitioningRef.current = false;
+    };
+
+    api.on('select', handleScroll);
+    api.on('settle', handleSettle);
+    
+    return () => {
+      api.off('select', handleScroll);
+      api.off('settle', handleSettle);
+    };
+  }, [api, isPlaying, playCurrentPage]);
+
+  useEffect(() => {
+    const cleanup = async () => {
+      await stopAudio();
+    };
+    return () => {
+      cleanup();
+    };
+  }, [stopAudio]);
+
+  useEffect(() => {
+    if (!onAudioComplete) return;
+    
+    const handleAudioComplete = () => {
+      const currentIndex = api?.selectedScrollSnap() ?? 0;
+      if (currentIndex < (story.pages?.length ?? 0) - 1) {
+        // Continue playing state flag
+        const wasPlaying = isPlaying;
+        
+        // When narration completes, advance to next page
+        onNext();
+        
+        // Make sure we're still in a playing state for the next page
+        if (!wasPlaying) {
+          setTimeout(() => {
+            playCurrentPage();
+          }, 300); // Give a little time for the carousel to settle
+        }
+      } else {
+        // At the last page, stop playing
+        stopAudio();
+      }
+    };
+    
+    onAudioComplete(handleAudioComplete);
+    
+    // No need to return cleanup as onAudioComplete handles this
+  }, [onAudioComplete, onNext, api, story.pages, stopAudio, isPlaying, playCurrentPage]);
+
   return (
     <div className="container mx-auto py-10">
       <div className="flex flex-col space-y-5">
@@ -249,8 +302,8 @@ const Story = ({ story }: Props) => {
             {/* Voice Selection and Play Button */}
             <div className="flex items-center space-x-2">
               <Select
-                value={selectedVoice}
-                onValueChange={setSelectedVoice}
+                value={currentVoice}
+                onValueChange={handleVoiceChange}
               >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Select voice" />
@@ -349,7 +402,12 @@ const Story = ({ story }: Props) => {
           </div>
         )}
 
-        <Carousel setApi={setApi} className="w-full lg:w-4/5 h-56 mx-auto">
+        <Carousel 
+          setApi={(newApi) => {
+            if (newApi) setApi(newApi);
+          }} 
+          className="w-full lg:w-4/5 h-56 mx-auto"
+        >
           <CarouselContent className="px-5">
             {story.pages.map((page, i) => (
               <CarouselItem key={i}>

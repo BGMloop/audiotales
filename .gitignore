@@ -6,6 +6,11 @@
 .pnp.js
 .yarn/install-state.gz
 
+# .env
+.env
+.env*
+.env.local
+
 # testing
 /coverage
 
@@ -45,11 +50,14 @@ next-env.d.ts
 /custom-voices
 /models/tts
 .tts-cache
-app/api/speak/route.ts
+/app/api/speak
 **/custom-voices/
 **/voice-samples/
 TEXT_TO_SPEECH_API_KEY
 OPENAI_API_KEY
+/app/api
+/lib
+/public/stories
 
 # MCP - DONT TOUCH MY STUFF
 mcp/
