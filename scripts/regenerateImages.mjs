@@ -16,19 +16,56 @@ const openai = new OpenAI({
 
 const storiesDirectory = path.join(process.cwd(), "public/stories");
 
-async function generateImage(prompt) {
+// Character reference tracking
+const characterReferences = new Map();
+
+function getCharacterReference(storyTitle, characterName) {
+  const key = `${storyTitle}-${characterName}`;
+  return characterReferences.get(key);
+}
+
+function setCharacterReference(storyTitle, characterName, reference) {
+  const key = `${storyTitle}-${characterName}`;
+  characterReferences.set(key, reference);
+}
+
+async function generateImage(prompt, storyTitle, characterName, previousImageUrl = null) {
+  let characterReference = '';
+  if (characterName) {
+    characterReference = getCharacterReference(storyTitle, characterName);
+    if (!characterReference && previousImageUrl) {
+      characterReference = `Reference image: ${previousImageUrl}`;
+      setCharacterReference(storyTitle, characterName, characterReference);
+    }
+  }
+
   const response = await openai.images.generate({
     model: "dall-e-3",
-    prompt: `Create a stunning Disney/Pixar style illustration for a children's storybook scene: ${prompt}. 
-The art style should be:
-- Highly detailed and polished like classic Disney animation
+    prompt: `Create a stunning Disney Renaissance era (1989-1999) illustration for a children's storybook scene: ${prompt}. 
+The art style must be:
+- EXACT Disney Renaissance era style with vivid colors and classic hand-drawn appeal
+- Precise 16:9 cinematic framing with clear foreground, midground, and background elements
+- Crisp, clean linework with cel-shaded coloring technique
 - Rich, vibrant colors with cinematic lighting
 - Expressive characters with clear emotions
 - Dynamic composition with depth and atmosphere
 - Soft, appealing shapes and forms
 - Magical and whimsical atmosphere
 - Child-friendly and enchanting
-Make it feel like a frame from a Disney animated feature film. Focus on creating an emotionally engaging scene that tells a story.`,
+
+${characterReference ? `Character consistency requirements:
+- Character MUST maintain EXACTLY the same:
+  * Physical features (face shape, body type, species traits)
+  * Clothing/accessories (identical colors, style, and design)
+  * Color palette (exact same fur/skin/hair/eye colors)
+  * Proportions and scale relative to other characters
+${characterReference}` : ''}
+
+DO NOT:
+- Change a character's species, coloring, or clothing between illustrations
+- Alter character designs or physical features between scenes
+- Deviate from the classic Disney animation style
+- Create realistic or photographic imagery`,
     size: "1024x1024",
     quality: "hd",
     style: "vivid",
@@ -75,10 +112,23 @@ async function regenerateStoryImages(storyTitle) {
     const textPath = path.join(storyDir, textFile);
     const pageContent = await fs.promises.readFile(textPath, 'utf-8');
     
+    // Extract character names from the story title
+    const characterName = storyTitle.split('--')[0].split('-').join(' ');
+    
+    // Get previous image URL for character reference
+    const previousImagePath = path.join(storyDir, `page${parseInt(pageNum) - 1}.png`);
+    let previousImageUrl = null;
+    try {
+      await fs.promises.access(previousImagePath);
+      previousImageUrl = previousImagePath;
+    } catch {
+      // No previous image exists
+    }
+    
     // Generate new image
     console.log('Generating new illustration...');
     const imagePrompt = `Illustration for children's story page: ${pageContent}`;
-    const imageUrl = await generateImage(imagePrompt);
+    const imageUrl = await generateImage(imagePrompt, storyTitle, characterName, previousImageUrl);
     
     // Save new image
     const imagePath = path.join(storyDir, `page${pageNum}.png`);
@@ -91,10 +141,15 @@ async function regenerateStoryImages(storyTitle) {
 
 async function main() {
   const storiesToRegenerate = [
-    "Barnaby-the-Badger's-Blueberry-Adventure",
-    "Felix's-First-Adventure",
-    "Milo's-Computer-Adventure",
-    "Onyx's-Adventure"
+    'Bouncing-Back--The-Story-of-Sam',
+    'Cameron-Bobcat-s-Tricycle-Adventure',
+    'Felix-and-the-Glittering-Stream',
+    'Howard-the-Friendly-Shark',
+    'Onyx-s-Quest--An-Owl-s-Journey-to-Self-Discovery',
+    'Onyx-the-Owl-and-the-Journey-of-Self-Discovery',
+    'Onyx-the-Owl-s-Quest-for-Purpose',
+    'Pierre-Penne-and-the-Adventure-in-Neverland',
+    'The-Bobcat-of-Kasukabe--A-Japanese-Adventure',
   ];
 
   for (const story of storiesToRegenerate) {
