@@ -406,7 +406,7 @@ const Story = ({ story }: Props) => {
           setApi={(newApi) => {
             if (newApi) setApi(newApi);
           }} 
-          className="w-full lg:w-4/5 h-56 mx-auto"
+          className="w-full lg:w-4/5 mx-auto"
         >
           <CarouselContent className="px-5">
             {story.pages.map((page, i) => (
@@ -414,19 +414,23 @@ const Story = ({ story }: Props) => {
                 <Card className="p-5 md:p-10 border">
                   <h2 className="text-center text-gray-400">{story.story}</h2>
 
-                  <CardContent className="p-5 xl:flex">
-                    <Image
-                      src={page.png}
-                      alt={`Page ${i + 1}`}
-                      width={500}
-                      height={500}
-                      className="w-80 h-8w-80 xl:w-[500px] xl:h-[500px] rounded-3xl mx-auto float-right p-5 xl:order-last"
-                      loading={i === 0 ? "eager" : "lazy"}
-                      priority={i === 0}
-                    />
-                    <p className="font-semibold text-xl first-letter:text-3xl whitespace-pre-wrap">
-                      {page.txt}
-                    </p>
+                  <CardContent className="p-5 xl:flex items-center justify-center gap-8">
+                    <div className="flex-1">
+                      <p className="font-semibold text-xl first-letter:text-3xl whitespace-pre-wrap">
+                        {page.txt}
+                      </p>
+                    </div>
+                    <div className="flex-1 flex justify-center">
+                      <Image
+                        src={page.png}
+                        alt={`Page ${i + 1}`}
+                        width={800}
+                        height={800}
+                        className="w-full max-w-[800px] h-auto rounded-3xl object-contain"
+                        loading={i === 0 ? "eager" : "lazy"}
+                        priority={i === 0}
+                      />
+                    </div>
                   </CardContent>
 
                   <p className="text-center text-gray-400">

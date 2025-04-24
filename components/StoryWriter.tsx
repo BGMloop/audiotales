@@ -188,7 +188,7 @@ function StoryWriter() {
             <SelectValue placeholder="How many pages should the story be?" />
           </SelectTrigger>
           <SelectContent className="w-full">
-            {Array.from({ length: 10 }, (_, i) => (
+            {Array.from({ length: 20 }, (_, i) => (
               <SelectItem key={i} value={String(i + 1)}>
                 {i + 1} {i === 0 ? "page" : "pages"}
               </SelectItem>
@@ -263,7 +263,7 @@ function StoryWriter() {
           {runStarted && (
             <div>
               <span className="mr-5 animate-in">
-                {"--- [AI Storyteller Has Started] ---"}
+                {"--- [AudioTales AI Has Started] ---"}
               </span>
               <br />
             </div>
