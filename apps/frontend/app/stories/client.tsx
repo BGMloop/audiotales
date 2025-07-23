@@ -1,6 +1,6 @@
 "use client";
 
-import { getAllStories } from "@/lib/stories";
+import { getAllStories } from "@/lib/server/stories";
 import { Story } from "@/types/stories";
 import { BookIcon, BookOpen, Download, Loader2, RefreshCcw, AlertTriangle, ImageIcon } from "lucide-react";
 import Image from "next/image";

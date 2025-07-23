@@ -10,7 +10,6 @@
     "regenerate-images": "node scripts/regenerateImages.mjs"
   },
   "dependencies": {
-    "@next/swc-win32-x64-msvc": "^15.2.4",
     "@radix-ui/react-collection": "^1.1.2",
     "@radix-ui/react-dialog": "^1.1.7",
     "@radix-ui/react-dismissable-layer": "^1.1.5",

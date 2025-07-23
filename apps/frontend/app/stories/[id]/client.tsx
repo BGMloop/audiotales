@@ -2,7 +2,7 @@
 
 import { notFound, useRouter } from "next/navigation";
 import Story from "@/components/Story";
-import { getStory } from "@/lib/stories";
+import { getStory } from "@/lib/server/stories";
 import { useEffect, useState } from "react";
 import { AlertCircle, Loader2, RefreshCcw } from "lucide-react";
 import { Story as StoryType } from "@/types/stories";
