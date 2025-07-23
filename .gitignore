@@ -71,3 +71,5 @@ app/api/run-script/zonos-tts-mcp.js
 app/api/run-script/zonos-tts-mcp.gpt
 app/api/run-script/zonos-tts-mcp
 app/api/tts/route.js
+apps/backend/secrets.txt
+apps/backend/backend.env
